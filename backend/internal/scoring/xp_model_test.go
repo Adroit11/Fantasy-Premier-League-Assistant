@@ -1,22 +1,22 @@
 package scoring
 
 import (
-	"testing"
 	"fpl-assistant/internal/fpl"
+	"testing"
 )
 
 func TestCalculateXP_NormalPlayer(t *testing.T) {
 	engine := NewXPEngine()
 	element := &fpl.Element{
-		ID:            101,
-		WebName:       "Saka",
-		Team:          1, // Arsenal
-		ElementType:   3, // MID
-		Status:        "a",
-		Form:          "7.5",
-		PointsPerGame: "6.2",
-		Minutes:       2400,
-		ExpectedGoals: "0.45",
+		ID:              101,
+		WebName:         "Saka",
+		Team:            1, // Arsenal
+		ElementType:     3, // MID
+		Status:          "a",
+		Form:            "7.5",
+		PointsPerGame:   "6.2",
+		Minutes:         2400,
+		ExpectedGoals:   "0.45",
 		ExpectedAssists: "0.35",
 	}
 

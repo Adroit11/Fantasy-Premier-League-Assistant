@@ -7,18 +7,18 @@ import (
 
 // LineupSelection represents the optimized starting XI, bench, and captaincy
 type LineupSelection struct {
-	Formation         string             `json:"formation"` // e.g. "3-5-2", "4-3-3"
-	TotalProjectedXP  float64            `json:"total_projected_xp"`
-	CaptainID         int                `json:"captain_id"`
-	CaptainName       string             `json:"captain_name"`
-	ViceCaptainID     int                `json:"vice_captain_id"`
-	ViceCaptainName   string             `json:"vice_captain_name"`
-	StartingXI        []PlayerProjection `json:"starting_xi"`
-	Bench             []PlayerProjection `json:"bench"`
-	Goalkeepers       []PlayerProjection `json:"goalkeepers"`
-	Defenders         []PlayerProjection `json:"defenders"`
-	Midfielders       []PlayerProjection `json:"midfielders"`
-	Forwards          []PlayerProjection `json:"forwards"`
+	Formation        string             `json:"formation"` // e.g. "3-5-2", "4-3-3"
+	TotalProjectedXP float64            `json:"total_projected_xp"`
+	CaptainID        int                `json:"captain_id"`
+	CaptainName      string             `json:"captain_name"`
+	ViceCaptainID    int                `json:"vice_captain_id"`
+	ViceCaptainName  string             `json:"vice_captain_name"`
+	StartingXI       []PlayerProjection `json:"starting_xi"`
+	Bench            []PlayerProjection `json:"bench"`
+	Goalkeepers      []PlayerProjection `json:"goalkeepers"`
+	Defenders        []PlayerProjection `json:"defenders"`
+	Midfielders      []PlayerProjection `json:"midfielders"`
+	Forwards         []PlayerProjection `json:"forwards"`
 }
 
 type Optimizer interface {

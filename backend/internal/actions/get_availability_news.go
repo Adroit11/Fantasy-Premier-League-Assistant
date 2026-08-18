@@ -2,9 +2,12 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
+
+	"github.com/gofiber/fiber/v2"
+
+	"fpl-assistant/internal/db"
 	"fpl-assistant/internal/fpl"
 )
 
@@ -36,11 +39,13 @@ type GetAvailabilityNewsOutput struct {
 
 type GetAvailabilityNewsAction struct {
 	client fpl.Client
+	db     *db.Database
 }
 
-func NewGetAvailabilityNewsAction(client fpl.Client) *GetAvailabilityNewsAction {
+func NewGetAvailabilityNewsAction(client fpl.Client, database *db.Database) *GetAvailabilityNewsAction {
 	return &GetAvailabilityNewsAction{
 		client: client,
+		db:     database,
 	}
 }
 
@@ -50,28 +55,13 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 		return nil, fmt.Errorf("get_availability_news: failed to fetch bootstrap: %w", err)
 	}
 
-	elementMap := make(map[int]fpl.Element)
-	for _, el := range bootstrap.Elements {
-		elementMap[el.ID] = el
-	}
-	teamMap := make(map[int]fpl.Team)
-	for _, tm := range bootstrap.Teams {
-		teamMap[tm.ID] = tm
-	}
-	posMap := map[int]string{1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
+	elementMap := buildElementMap(bootstrap.Elements)
+	teamMap := buildTeamMap(bootstrap.Teams)
 
 	var targetIDs []int
 
 	if input.TeamID != nil && *input.TeamID > 0 {
-		activeGW := 1
-		for _, ev := range bootstrap.Events {
-			if ev.IsCurrent {
-				activeGW = ev.ID
-				break
-			} else if ev.IsNext {
-				activeGW = ev.ID
-			}
-		}
+		activeGW := resolveActiveGameweek(bootstrap.Events)
 		picksResp, err := a.client.GetPicks(ctx, *input.TeamID, activeGW)
 		if err == nil && picksResp != nil {
 			for _, p := range picksResp.Picks {
@@ -81,7 +71,6 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 	} else if len(input.PlayerIDs) > 0 {
 		targetIDs = input.PlayerIDs
 	} else {
-		// If neither specified, check all players with active news
 		for _, el := range bootstrap.Elements {
 			if el.News != "" || el.Status != "a" {
 				targetIDs = append(targetIDs, el.ID)
@@ -91,6 +80,7 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 
 	var alerts []PlayerAvailabilityAlert
 	var healthy []PlayerAvailabilityAlert
+	var historyRows []db.AvailabilityAlertRow
 	doubtCount := 0
 	injuredCount := 0
 
@@ -105,31 +95,12 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 			teamShort = tm.ShortName
 		}
 
-		chance := 100
-		severity := "success"
-		if el.ChanceOfPlayingNextRound != nil {
-			chance = *el.ChanceOfPlayingNextRound
-			switch chance {
-			case 100:
-				severity = "success"
-			case 75:
-				severity = "warning"
-				doubtCount++
-			case 50, 25:
-				severity = "caution"
-				doubtCount++
-			case 0:
-				severity = "danger"
-				injuredCount++
-			}
-		} else if el.Status == "i" || el.Status == "s" || el.Status == "u" {
-			chance = 0
-			severity = "danger"
-			injuredCount++
-		} else if el.Status == "d" {
-			chance = 50
-			severity = "caution"
+		chance, severity := availabilityFromElement(el)
+		switch severity {
+		case "warning", "caution":
 			doubtCount++
+		case "danger":
+			injuredCount++
 		}
 
 		newsAdded := ""
@@ -142,7 +113,7 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 			WebName:         el.WebName,
 			FullName:        fmt.Sprintf("%s %s", el.FirstName, el.SecondName),
 			TeamShortName:   teamShort,
-			PositionName:    posMap[el.ElementType],
+			PositionName:    positionNames[el.ElementType],
 			Status:          el.Status,
 			ChanceOfPlaying: chance,
 			Severity:        severity,
@@ -152,9 +123,22 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 
 		if severity != "success" || el.News != "" {
 			alerts = append(alerts, alert)
+			historyRows = append(historyRows, db.AvailabilityAlertRow{
+				PlayerID:  el.ID,
+				WebName:   el.WebName,
+				TeamShort: teamShort,
+				Status:    el.Status,
+				Chance:    chance,
+				Severity:  severity,
+				News:      el.News,
+			})
 		} else {
 			healthy = append(healthy, alert)
 		}
+	}
+
+	if err := a.db.LogAvailabilityAlerts(ctx, historyRows); err != nil {
+		log.Printf("get_availability_news: persist alerts: %v", err)
 	}
 
 	return &GetAvailabilityNewsOutput{
@@ -166,19 +150,22 @@ func (a *GetAvailabilityNewsAction) Execute(ctx context.Context, input GetAvaila
 	}, nil
 }
 
-func (a *GetAvailabilityNewsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *GetAvailabilityNewsAction) Handle(c *fiber.Ctx) error {
 	var input GetAvailabilityNewsInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"bad_request","message":%q}`, err.Error()), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
 	}
 
-	res, err := a.Execute(r.Context(), input)
+	res, err := a.Execute(c.UserContext(), input)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"execution_failed","message":%q}`, err.Error()), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "execution_failed",
+			"message": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(res)
+	return c.JSON(res)
 }

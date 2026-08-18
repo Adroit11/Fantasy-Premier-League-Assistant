@@ -275,5 +275,9 @@ navTabs.forEach((tab) => {
   });
 });
 
-// Auto-load demo on initial launch
-loadSquadData(12345);
+// Auto-load team on initial launch (from env or fallback demo ID)
+const defaultTeamId = import.meta.env?.VITE_DEFAULT_TEAM_ID ? Number(import.meta.env.VITE_DEFAULT_TEAM_ID) : 12345;
+if (teamIdInput) {
+  teamIdInput.value = defaultTeamId;
+}
+loadSquadData(defaultTeamId);
