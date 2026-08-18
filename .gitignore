@@ -1,0 +1,19 @@
+# Agent Customizations & Documentation
+.agents/
+docs/
+AGENTS.md
+agents.md
+
+# Go build output
+backend/bin/
+*.exe
+
+# Frontend & Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Logs & Environment
+*.log
+.env
+.DS_Store

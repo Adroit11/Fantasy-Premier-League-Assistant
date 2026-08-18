@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-astryx-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FPL Assistant 2026/2027</title>
+  <!-- Google Fonts: Inter & Outfit -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./src/styles/astryx.css">
+  <link rel="stylesheet" href="./src/styles/pitch.css">
+  <style>
+    /* App Layout */
+    .astryx-app-layout {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: var(--astryx-space-6);
+      display: flex;
+      flex-direction: column;
+      gap: var(--astryx-space-5);
+    }
+
+    .astryx-nav-bar {
+      display: flex;
+      gap: var(--astryx-space-2);
+      border-bottom: 1px solid var(--astryx-color-border-subtle);
+      padding-bottom: var(--astryx-space-2);
+    }
+
+    .astryx-nav-tab {
+      padding: var(--astryx-space-2) var(--astryx-space-4);
+      background: transparent;
+      border: none;
+      border-radius: var(--astryx-radius-sm);
+      color: var(--astryx-color-text-secondary);
+      font-family: var(--astryx-font-sans);
+      font-size: var(--astryx-font-size-sm);
+      font-weight: var(--astryx-font-weight-semibold);
+      cursor: pointer;
+      transition: all var(--astryx-transition-fast);
+    }
+
+    .astryx-nav-tab:hover {
+      color: var(--astryx-color-text-primary);
+      background-color: var(--astryx-color-bg-subtle);
+    }
+
+    .astryx-nav-tab.active {
+      color: var(--astryx-color-brand-primary);
+      background-color: rgba(0, 255, 135, 0.1);
+      border-bottom: 2px solid var(--astryx-color-brand-primary);
+    }
+
+    .astryx-loading-spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(0, 255, 135, 0.3);
+      border-top-color: var(--astryx-color-brand-primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="astryx-app-layout">
+    <!-- Connect Manager Bar -->
+    <section class="astryx-card" id="connection-card" style="padding: var(--astryx-space-4);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--astryx-space-3);">
+        <div class="astryx-flex-row">
+          <span class="astryx-icon astryx-icon-lg astryx-icon-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+            </svg>
+          </span>
+          <div>
+            <h2 class="astryx-heading-card" style="font-size: var(--astryx-font-size-base);">FPL Assistant 2026/2027</h2>
+            <p class="astryx-text-muted">Enter your official Team ID to load squad, injury news & AI selection suggestions</p>
+          </div>
+        </div>
+
+        <form id="connect-form" class="astryx-flex-row" style="gap: var(--astryx-space-2);">
+          <input 
+            type="number" 
+            id="team-id-input" 
+            class="astryx-input" 
+            placeholder="e.g. 12345" 
+            required 
+            style="width: 160px;"
+          />
+          <button type="submit" id="connect-btn" class="astryx-btn astryx-btn-primary">
+            Connect Squad
+          </button>
+          <button type="button" id="demo-btn" class="astryx-btn astryx-btn-secondary" title="Load sample squad data">
+            Load Demo XI
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <!-- Header Summary Area -->
+    <div id="header-container"></div>
+
+    <!-- Navigation Tabs -->
+    <nav class="astryx-nav-bar" id="app-nav">
+      <button class="astryx-nav-tab active" data-tab="pitch">Pitch & Selection XI</button>
+      <button class="astryx-nav-tab" data-tab="availability">Availability & Injuries</button>
+      <button class="astryx-nav-tab" data-tab="projections">Multi-GW Projections</button>
+      <button class="astryx-nav-tab" data-tab="transfers">Transfer Advisor</button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="tab-content" style="display: flex; flex-direction: column; gap: var(--astryx-space-5);">
+      <!-- Dynamic Views Loaded by main.js -->
+    </main>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

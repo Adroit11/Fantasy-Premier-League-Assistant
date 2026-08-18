@@ -1,0 +1,226 @@
+/* ==========================================================================
+   ASTRYX DESIGN SYSTEM - 2D PITCH VIEW & PLAYER CARDS
+   ========================================================================== */
+
+.astryx-pitch-container {
+  background: radial-gradient(circle at 50% 50%, #0d2818 0%, #06140c 100%);
+  border: 2px solid rgba(0, 255, 135, 0.2);
+  border-radius: var(--astryx-radius-lg);
+  padding: var(--astryx-space-6) var(--astryx-space-4);
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.8), var(--astryx-shadow-card);
+  min-height: 520px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* Pitch Field Lines */
+.astryx-pitch-lines {
+  position: absolute;
+  inset: var(--astryx-space-4);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--astryx-radius-md);
+  pointer-events: none;
+}
+
+/* Center Line & Circle */
+.astryx-pitch-lines::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1.5px;
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-50%);
+}
+
+.astryx-pitch-center-circle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 90px;
+  height: 90px;
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+/* Formation Rows */
+.astryx-pitch-row {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  margin: var(--astryx-space-2) 0;
+}
+
+/* Player Pitch Card */
+.astryx-pitch-player {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: var(--astryx-color-bg-surface-raised);
+  border: 1px solid var(--astryx-color-border-subtle);
+  border-radius: var(--astryx-radius-sm);
+  padding: var(--astryx-space-2);
+  min-width: 96px;
+  max-width: 110px;
+  box-shadow: var(--astryx-shadow-card);
+  backdrop-filter: var(--astryx-backdrop-blur);
+  transition: all var(--astryx-transition-normal);
+  cursor: pointer;
+  position: relative;
+}
+
+.astryx-pitch-player:hover {
+  transform: translateY(-3px) scale(1.03);
+  border-color: var(--astryx-color-brand-primary);
+  box-shadow: var(--astryx-shadow-glow-green);
+  z-index: 5;
+}
+
+/* Captain & Vice-Captain Glow */
+.astryx-pitch-player.is-captain {
+  border-color: var(--astryx-color-brand-primary);
+  box-shadow: var(--astryx-shadow-glow-green);
+}
+
+.astryx-pitch-player.is-vice-captain {
+  border-color: var(--astryx-color-brand-secondary);
+  box-shadow: var(--astryx-shadow-glow-cyan);
+}
+
+/* Captaincy Ribbon */
+.astryx-captain-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--astryx-font-display);
+  font-size: 11px;
+  font-weight: var(--astryx-font-weight-black);
+  line-height: 1;
+}
+
+.astryx-captain-badge.cap {
+  background-color: var(--astryx-color-brand-primary);
+  color: #0b0712;
+  box-shadow: 0 0 10px rgba(0, 255, 135, 0.8);
+}
+
+.astryx-captain-badge.vice {
+  background-color: var(--astryx-color-brand-secondary);
+  color: #0b0712;
+  box-shadow: 0 0 10px rgba(4, 245, 255, 0.8);
+}
+
+/* Player Jersey / Icon */
+.astryx-player-shirt {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--astryx-color-bg-subtle);
+  margin-bottom: var(--astryx-space-1);
+}
+
+.astryx-player-shirt svg {
+  width: 20px;
+  height: 20px;
+  color: var(--astryx-color-text-primary);
+}
+
+/* Player Names & Stats */
+.astryx-player-name {
+  font-family: var(--astryx-font-sans);
+  font-size: var(--astryx-font-size-xs);
+  font-weight: var(--astryx-font-weight-semibold);
+  color: var(--astryx-color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
+  text-align: center;
+}
+
+.astryx-player-xp {
+  font-family: var(--astryx-font-display);
+  font-size: var(--astryx-font-size-sm);
+  font-weight: var(--astryx-font-weight-bold);
+  color: var(--astryx-color-brand-primary);
+  margin-top: 2px;
+}
+
+.astryx-player-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 4px;
+  font-size: 11px;
+}
+
+.astryx-player-fixture {
+  color: var(--astryx-color-text-muted);
+  font-size: 10px;
+  font-weight: var(--astryx-font-weight-medium);
+}
+
+/* Availability Status Dot */
+.astryx-status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  position: absolute;
+  top: 6px;
+  left: 6px;
+}
+
+.astryx-status-dot.success { background-color: var(--astryx-color-status-success); }
+.astryx-status-dot.warning { background-color: var(--astryx-color-status-warning); box-shadow: 0 0 6px var(--astryx-color-status-warning); }
+.astryx-status-dot.caution { background-color: var(--astryx-color-status-caution); box-shadow: 0 0 6px var(--astryx-color-status-caution); }
+.astryx-status-dot.danger  { background-color: var(--astryx-color-status-danger); box-shadow: 0 0 6px var(--astryx-color-status-danger); }
+
+/* Bench Container */
+.astryx-bench-container {
+  background-color: var(--astryx-color-bg-surface);
+  border: 1px solid var(--astryx-color-border-subtle);
+  border-radius: var(--astryx-radius-md);
+  padding: var(--astryx-space-4);
+  margin-top: var(--astryx-space-4);
+}
+
+.astryx-bench-row {
+  display: flex;
+  justify-content: space-around;
+  gap: var(--astryx-space-3);
+  margin-top: var(--astryx-space-3);
+}
+
+.astryx-bench-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+
+.astryx-bench-priority {
+  font-family: var(--astryx-font-sans);
+  font-size: 10px;
+  font-weight: var(--astryx-font-weight-bold);
+  color: var(--astryx-color-text-muted);
+  text-transform: uppercase;
+  margin-bottom: var(--astryx-space-1);
+}

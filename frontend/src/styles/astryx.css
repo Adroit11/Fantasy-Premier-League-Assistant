@@ -1,0 +1,418 @@
+/* ==========================================================================
+   ASTRYX DESIGN SYSTEM - CORE TOKEN SPECIFICATION
+   Theme: FPL Premier Dark / Neon 2026/2027
+   ========================================================================== */
+
+:root, [data-astryx-theme="dark"] {
+  /* Surfaces & Canvas */
+  --astryx-color-bg-canvas: #0b0712;
+  --astryx-color-bg-surface: #140d21;
+  --astryx-color-bg-surface-raised: #1e1333;
+  --astryx-color-bg-surface-overlay: rgba(30, 19, 51, 0.78);
+  --astryx-color-bg-subtle: #271a42;
+  --astryx-color-bg-input: #110b1c;
+
+  /* Typography & Content Colors */
+  --astryx-color-text-primary: #f5f3f8;
+  --astryx-color-text-secondary: #a79bb7;
+  --astryx-color-text-muted: #6e6182;
+  --astryx-color-text-inverse: #0b0712;
+  --astryx-color-text-brand: #00ff87;
+
+  /* Brand Accents */
+  --astryx-color-brand-primary: #00ff87;        /* Premier Green */
+  --astryx-color-brand-secondary: #04f5ff;      /* Cyan */
+  --astryx-color-brand-accent: #e90052;         /* Magenta Pulse */
+  --astryx-color-brand-surface: #37003c;        /* FPL Purple */
+
+  /* Status & Availability Alerts */
+  --astryx-color-status-success: #00ff87;       /* 100% Fit */
+  --astryx-color-status-warning: #ffb800;       /* 75% Minor Doubt */
+  --astryx-color-status-caution: #ff7a00;       /* 25-50% Major Doubt */
+  --astryx-color-status-danger: #e90052;        /* 0% Injured / Suspended */
+  --astryx-color-status-info: #04f5ff;
+
+  /* Fixture Difficulty Rating (FDR) Tokens */
+  --astryx-color-fdr-1: #00ff87;
+  --astryx-color-fdr-2: #01fc7a;
+  --astryx-color-fdr-3: #e7e7e7;
+  --astryx-color-fdr-4: #ff1751;
+  --astryx-color-fdr-5: #80072d;
+
+  /* Borders & Dividers */
+  --astryx-color-border-subtle: rgba(167, 155, 183, 0.12);
+  --astryx-color-border-default: rgba(167, 155, 183, 0.24);
+  --astryx-color-border-focus: var(--astryx-color-brand-primary);
+  --astryx-color-border-glow: rgba(0, 255, 135, 0.4);
+
+  /* Typography */
+  --astryx-font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --astryx-font-display: 'Outfit', 'Inter', -apple-system, sans-serif;
+  --astryx-font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  --astryx-font-size-xs: 0.75rem;       /* 12px */
+  --astryx-font-size-sm: 0.875rem;      /* 14px */
+  --astryx-font-size-base: 1rem;        /* 16px */
+  --astryx-font-size-lg: 1.125rem;      /* 18px */
+  --astryx-font-size-xl: 1.25rem;       /* 20px */
+  --astryx-font-size-2xl: 1.5rem;       /* 24px */
+  --astryx-font-size-3xl: 1.875rem;     /* 30px */
+  --astryx-font-size-stat: 2.75rem;     /* 44px */
+
+  --astryx-font-weight-regular: 400;
+  --astryx-font-weight-medium: 500;
+  --astryx-font-weight-semibold: 600;
+  --astryx-font-weight-bold: 700;
+  --astryx-font-weight-black: 900;
+
+  --astryx-line-height-tight: 1.15;
+  --astryx-line-height-normal: 1.5;
+  --astryx-line-height-relaxed: 1.75;
+
+  --astryx-letter-spacing-tight: -0.025em;
+  --astryx-letter-spacing-normal: 0em;
+  --astryx-letter-spacing-wide: 0.05em;
+  --astryx-letter-spacing-caps: 0.08em;
+
+  /* Iconography Scale */
+  --astryx-icon-size-xs: 14px;
+  --astryx-icon-size-sm: 16px;
+  --astryx-icon-size-md: 20px;
+  --astryx-icon-size-lg: 24px;
+  --astryx-icon-size-xl: 32px;
+
+  --astryx-icon-stroke-thin: 1.5px;
+  --astryx-icon-stroke-regular: 2px;
+  --astryx-icon-stroke-bold: 2.5px;
+
+  --astryx-icon-color-default: var(--astryx-color-text-secondary);
+  --astryx-icon-color-primary: var(--astryx-color-brand-primary);
+  --astryx-icon-color-accent: var(--astryx-color-brand-accent);
+  --astryx-icon-color-muted: var(--astryx-color-text-muted);
+  --astryx-icon-color-warning: var(--astryx-color-status-warning);
+  --astryx-icon-color-danger: var(--astryx-color-status-danger);
+  --astryx-icon-color-success: var(--astryx-color-status-success);
+
+  /* Spacing Scale */
+  --astryx-space-1: 4px;
+  --astryx-space-2: 8px;
+  --astryx-space-3: 12px;
+  --astryx-space-4: 16px;
+  --astryx-space-5: 20px;
+  --astryx-space-6: 24px;
+  --astryx-space-8: 32px;
+  --astryx-space-10: 40px;
+  --astryx-space-12: 48px;
+
+  /* Border Radii */
+  --astryx-radius-xs: 4px;
+  --astryx-radius-sm: 6px;
+  --astryx-radius-md: 10px;
+  --astryx-radius-lg: 16px;
+  --astryx-radius-xl: 24px;
+  --astryx-radius-pill: 9999px;
+
+  /* Shadows & Glassmorphism */
+  --astryx-shadow-subtle: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --astryx-shadow-card: 0 4px 20px rgba(0, 0, 0, 0.45);
+  --astryx-shadow-glow-green: 0 0 20px rgba(0, 255, 135, 0.35);
+  --astryx-shadow-glow-cyan: 0 0 20px rgba(4, 245, 255, 0.35);
+  --astryx-shadow-glow-magenta: 0 0 20px rgba(233, 0, 82, 0.35);
+  --astryx-backdrop-blur: blur(14px);
+
+  /* Motion */
+  --astryx-transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --astryx-transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+  --astryx-transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Base Reset */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--astryx-font-sans);
+  background-color: var(--astryx-color-bg-canvas);
+  color: var(--astryx-color-text-primary);
+  line-height: var(--astryx-line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* Typography Classes */
+.astryx-heading-page {
+  font-family: var(--astryx-font-display);
+  font-size: var(--astryx-font-size-2xl);
+  font-weight: var(--astryx-font-weight-bold);
+  line-height: var(--astryx-line-height-tight);
+  letter-spacing: var(--astryx-letter-spacing-tight);
+  color: var(--astryx-color-text-primary);
+}
+
+.astryx-heading-section {
+  font-family: var(--astryx-font-display);
+  font-size: var(--astryx-font-size-xl);
+  font-weight: var(--astryx-font-weight-semibold);
+  color: var(--astryx-color-text-primary);
+}
+
+.astryx-heading-card {
+  font-family: var(--astryx-font-display);
+  font-size: var(--astryx-font-size-lg);
+  font-weight: var(--astryx-font-weight-semibold);
+  color: var(--astryx-color-text-primary);
+}
+
+.astryx-stat-value {
+  font-family: var(--astryx-font-display);
+  font-size: var(--astryx-font-size-stat);
+  font-weight: var(--astryx-font-weight-black);
+  line-height: 1;
+  color: var(--astryx-color-brand-primary);
+  text-shadow: var(--astryx-shadow-glow-green);
+}
+
+.astryx-stat-sub {
+  font-family: var(--astryx-font-sans);
+  font-size: var(--astryx-font-size-sm);
+  color: var(--astryx-color-text-secondary);
+}
+
+.astryx-label-caps {
+  font-family: var(--astryx-font-sans);
+  font-size: var(--astryx-font-size-xs);
+  font-weight: var(--astryx-font-weight-semibold);
+  letter-spacing: var(--astryx-letter-spacing-caps);
+  text-transform: uppercase;
+  color: var(--astryx-color-text-muted);
+}
+
+.astryx-text-secondary {
+  color: var(--astryx-color-text-secondary);
+  font-size: var(--astryx-font-size-sm);
+}
+
+.astryx-text-muted {
+  color: var(--astryx-color-text-muted);
+  font-size: var(--astryx-font-size-xs);
+}
+
+/* Iconography Wrapper */
+.astryx-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--astryx-icon-color-default);
+  flex-shrink: 0;
+  transition: color var(--astryx-transition-fast);
+}
+
+.astryx-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke-width: var(--astryx-icon-stroke-regular);
+}
+
+.astryx-icon-xs { width: var(--astryx-icon-size-xs); height: var(--astryx-icon-size-xs); }
+.astryx-icon-sm { width: var(--astryx-icon-size-sm); height: var(--astryx-icon-size-sm); }
+.astryx-icon-md { width: var(--astryx-icon-size-md); height: var(--astryx-icon-size-md); }
+.astryx-icon-lg { width: var(--astryx-icon-size-lg); height: var(--astryx-icon-size-lg); }
+.astryx-icon-xl { width: var(--astryx-icon-size-xl); height: var(--astryx-icon-size-xl); }
+
+.astryx-icon-primary { color: var(--astryx-icon-color-primary); }
+.astryx-icon-accent { color: var(--astryx-icon-color-accent); }
+.astryx-icon-success { color: var(--astryx-icon-color-success); }
+.astryx-icon-warning { color: var(--astryx-icon-color-warning); }
+.astryx-icon-danger { color: var(--astryx-icon-color-danger); }
+
+/* Containers & Cards */
+.astryx-card {
+  background-color: var(--astryx-color-bg-surface);
+  border: 1px solid var(--astryx-color-border-subtle);
+  border-radius: var(--astryx-radius-md);
+  padding: var(--astryx-space-5);
+  box-shadow: var(--astryx-shadow-card);
+  backdrop-filter: var(--astryx-backdrop-blur);
+  transition: border-color var(--astryx-transition-normal), box-shadow var(--astryx-transition-normal);
+}
+
+.astryx-card-raised {
+  background-color: var(--astryx-color-bg-surface-raised);
+}
+
+.astryx-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--astryx-space-4);
+}
+
+/* Badges */
+.astryx-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--astryx-space-1);
+  padding: var(--astryx-space-1) var(--astryx-space-2);
+  border-radius: var(--astryx-radius-pill);
+  font-size: var(--astryx-font-size-xs);
+  font-weight: var(--astryx-font-weight-semibold);
+  letter-spacing: var(--astryx-letter-spacing-wide);
+  line-height: 1;
+}
+
+.astryx-badge-success {
+  background-color: rgba(0, 255, 135, 0.15);
+  color: var(--astryx-color-status-success);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+}
+
+.astryx-badge-warning {
+  background-color: rgba(255, 184, 0, 0.15);
+  color: var(--astryx-color-status-warning);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+}
+
+.astryx-badge-caution {
+  background-color: rgba(255, 122, 0, 0.15);
+  color: var(--astryx-color-status-caution);
+  border: 1px solid rgba(255, 122, 0, 0.3);
+}
+
+.astryx-badge-danger {
+  background-color: rgba(233, 0, 82, 0.15);
+  color: var(--astryx-color-status-danger);
+  border: 1px solid rgba(233, 0, 82, 0.3);
+}
+
+.astryx-badge-brand {
+  background-color: rgba(0, 255, 135, 0.2);
+  color: var(--astryx-color-brand-primary);
+  border: 1px solid var(--astryx-color-brand-primary);
+  box-shadow: var(--astryx-shadow-glow-green);
+}
+
+.astryx-badge-cyan {
+  background-color: rgba(4, 245, 255, 0.2);
+  color: var(--astryx-color-brand-secondary);
+  border: 1px solid var(--astryx-color-brand-secondary);
+  box-shadow: var(--astryx-shadow-glow-cyan);
+}
+
+/* FDR Badges */
+.astryx-fdr-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border-radius: var(--astryx-radius-xs);
+  font-size: var(--astryx-font-size-xs);
+  font-weight: var(--astryx-font-weight-bold);
+  color: #0b0712;
+}
+
+.astryx-fdr-1 { background-color: var(--astryx-color-fdr-1); }
+.astryx-fdr-2 { background-color: var(--astryx-color-fdr-2); }
+.astryx-fdr-3 { background-color: var(--astryx-color-fdr-3); }
+.astryx-fdr-4 { background-color: var(--astryx-color-fdr-4); color: #fff; }
+.astryx-fdr-5 { background-color: var(--astryx-color-fdr-5); color: #fff; }
+
+/* Buttons */
+.astryx-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--astryx-space-2);
+  padding: var(--astryx-space-2) var(--astryx-space-4);
+  border-radius: var(--astryx-radius-sm);
+  font-family: var(--astryx-font-sans);
+  font-size: var(--astryx-font-size-sm);
+  font-weight: var(--astryx-font-weight-semibold);
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all var(--astryx-transition-fast);
+  text-decoration: none;
+}
+
+.astryx-btn-primary {
+  background-color: var(--astryx-color-brand-primary);
+  color: var(--astryx-color-text-inverse);
+}
+
+.astryx-btn-primary:hover {
+  box-shadow: var(--astryx-shadow-glow-green);
+  transform: translateY(-1px);
+}
+
+.astryx-btn-secondary {
+  background-color: var(--astryx-color-bg-subtle);
+  color: var(--astryx-color-text-primary);
+  border-color: var(--astryx-color-border-default);
+}
+
+.astryx-btn-secondary:hover {
+  border-color: var(--astryx-color-brand-primary);
+  color: var(--astryx-color-brand-primary);
+}
+
+.astryx-btn-ghost {
+  background-color: transparent;
+  color: var(--astryx-color-text-secondary);
+}
+
+.astryx-btn-ghost:hover {
+  color: var(--astryx-color-text-primary);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Inputs */
+.astryx-input {
+  background-color: var(--astryx-color-bg-input);
+  border: 1px solid var(--astryx-color-border-default);
+  border-radius: var(--astryx-radius-sm);
+  padding: var(--astryx-space-2) var(--astryx-space-3);
+  color: var(--astryx-color-text-primary);
+  font-family: var(--astryx-font-sans);
+  font-size: var(--astryx-font-size-base);
+  outline: none;
+  transition: border-color var(--astryx-transition-fast), box-shadow var(--astryx-transition-fast);
+}
+
+.astryx-input:focus {
+  border-color: var(--astryx-color-border-focus);
+  box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
+}
+
+/* Layout Utilities */
+.astryx-flex-row {
+  display: flex;
+  align-items: center;
+  gap: var(--astryx-space-2);
+}
+
+.astryx-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--astryx-space-4);
+}
+
+.astryx-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--astryx-space-4);
+}
+
+.astryx-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--astryx-space-4);
+}
+
+@media (max-width: 900px) {
+  .astryx-grid-2, .astryx-grid-3, .astryx-grid-4 {
+    grid-template-columns: 1fr;
+  }
+}
