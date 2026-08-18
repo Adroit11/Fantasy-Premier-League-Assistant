@@ -2,11 +2,46 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const http = require('http');
+const fs = require('fs');
+
+// Simple .env parser for Electron
+function loadEnv() {
+  const envPaths = [
+    path.resolve(__dirname, '../../.env'),
+    path.resolve(__dirname, '../.env'),
+    path.resolve(__dirname, '.env')
+  ];
+
+  for (const p of envPaths) {
+    if (fs.existsSync(p)) {
+      try {
+        const content = fs.readFileSync(p, 'utf-8');
+        content.split('\n').forEach(line => {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) return;
+          const [k, ...v] = trimmed.split('=');
+          if (k && v.length) {
+            const key = k.trim();
+            const val = v.join('=').trim().replace(/^["']|["']$/g, '');
+            if (!process.env[key]) {
+              process.env[key] = val;
+            }
+          }
+        });
+        break;
+      } catch (e) {
+        console.warn('[Electron] Could not read .env file:', e.message);
+      }
+    }
+  }
+}
+
+loadEnv();
 
 let mainWindow = null;
 let goBackendProcess = null;
-const BACKEND_PORT = 18492;
-const BACKEND_URL = `http://127.0.0.1:${BACKEND_PORT}`;
+const BACKEND_PORT = Number(process.env.BACKEND_PORT || process.env.PORT || 18492);
+const BACKEND_URL = process.env.BACKEND_URL || `http://127.0.0.1:${BACKEND_PORT}`;
 
 const ACTION_ROUTES = {
   'connect_team': '/api/v1/team/connect',

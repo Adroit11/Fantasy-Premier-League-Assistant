@@ -2,11 +2,10 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"fpl-assistant/internal/fpl"
 	"fpl-assistant/internal/scoring"
+	"github.com/gofiber/fiber/v2"
 )
 
 type CalculateProjectionsInput struct {
@@ -37,8 +36,8 @@ type CalculateProjectionsOutput struct {
 }
 
 type CalculateProjectionsAction struct {
-	client  fpl.Client
-	engine  scoring.Engine
+	client fpl.Client
+	engine scoring.Engine
 }
 
 func NewCalculateProjectionsAction(client fpl.Client, engine scoring.Engine) *CalculateProjectionsAction {
@@ -59,16 +58,7 @@ func (a *CalculateProjectionsAction) Execute(ctx context.Context, input Calculat
 		return nil, fmt.Errorf("calculate_projections: failed to fetch fixtures: %w", err)
 	}
 
-	// Determine start and end GW
-	currentGW := 1
-	for _, ev := range bootstrap.Events {
-		if ev.IsCurrent {
-			currentGW = ev.ID
-			break
-		} else if ev.IsNext {
-			currentGW = ev.ID
-		}
-	}
+	currentGW := resolveActiveGameweek(bootstrap.Events)
 
 	startGW := currentGW
 	if input.StartGW != nil && *input.StartGW > 0 {
@@ -83,15 +73,9 @@ func (a *CalculateProjectionsAction) Execute(ctx context.Context, input Calculat
 		endGW = 38
 	}
 
-	elementMap := make(map[int]fpl.Element)
-	for _, el := range bootstrap.Elements {
-		elementMap[el.ID] = el
-	}
-	teamMap := make(map[int]fpl.Team)
-	for _, tm := range bootstrap.Teams {
-		teamMap[tm.ID] = tm
-	}
-	posMap := map[int]string{1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
+	elementMap := buildElementMap(bootstrap.Elements)
+	teamMap := buildTeamMap(bootstrap.Teams)
+	fixIndex := scoring.NewFixtureIndex(fixtures)
 
 	var targetIDs []int
 	if input.TeamID != nil && *input.TeamID > 0 {
@@ -104,7 +88,6 @@ func (a *CalculateProjectionsAction) Execute(ctx context.Context, input Calculat
 	} else if len(input.PlayerIDs) > 0 {
 		targetIDs = input.PlayerIDs
 	} else {
-		// Default top 20 popular players
 		for i, el := range bootstrap.Elements {
 			if i >= 20 {
 				break
@@ -131,7 +114,7 @@ func (a *CalculateProjectionsAction) Execute(ctx context.Context, input Calculat
 		playerTotalXP := 0.0
 
 		for gw := startGW; gw <= endGW; gw++ {
-			proj := a.engine.CalculatePlayerXP(&el, teamMap, fixtures, gw)
+			proj := a.engine.CalculatePlayerXPIndexed(&el, teamMap, fixIndex, gw)
 			playerProjs = append(playerProjs, proj)
 			playerTotalXP += proj.ProjectedXP
 		}
@@ -148,7 +131,7 @@ func (a *CalculateProjectionsAction) Execute(ctx context.Context, input Calculat
 			PlayerID:      el.ID,
 			WebName:       el.WebName,
 			TeamShortName: teamShort,
-			PositionName:  posMap[el.ElementType],
+			PositionName:  positionNames[el.ElementType],
 			ElementType:   el.ElementType,
 			Cost:          float64(el.NowCost) / 10.0,
 			TotalXP:       playerTotalXP,
@@ -166,19 +149,22 @@ func (a *CalculateProjectionsAction) Execute(ctx context.Context, input Calculat
 	}, nil
 }
 
-func (a *CalculateProjectionsAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *CalculateProjectionsAction) Handle(c *fiber.Ctx) error {
 	var input CalculateProjectionsInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"bad_request","message":%q}`, err.Error()), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
 	}
 
-	res, err := a.Execute(r.Context(), input)
+	res, err := a.Execute(c.UserContext(), input)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"execution_failed","message":%q}`, err.Error()), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "execution_failed",
+			"message": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(res)
+	return c.JSON(res)
 }

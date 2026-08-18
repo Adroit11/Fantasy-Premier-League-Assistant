@@ -11,6 +11,8 @@ import (
 const (
 	DefaultBaseURL = "https://fantasy.premierleague.com/api"
 	UserAgent      = "FPL-Assistant-Desktop/1.0 (Go; Windows)"
+	requestTimeout = 10 * time.Second
+	maxRPS         = 5
 )
 
 // Client interface abstracts FPL API communication for production and mock testing
@@ -24,21 +26,62 @@ type Client interface {
 // HTTPClient implements Client using standard net/http and caching
 type HTTPClient struct {
 	baseURL    string
+	userAgent  string
 	httpClient *http.Client
 	cache      Cache
+	limiter    *tokenBucket
+	group      flightGroup
 }
 
-func NewHTTPClient(cache Cache) *HTTPClient {
+func NewHTTPClient(cache Cache, baseURL string, userAgent string) *HTTPClient {
+	if baseURL == "" {
+		baseURL = DefaultBaseURL
+	}
+	if userAgent == "" {
+		userAgent = UserAgent
+	}
+
 	return &HTTPClient{
-		baseURL: DefaultBaseURL,
+		baseURL:   baseURL,
+		userAgent: userAgent,
 		httpClient: &http.Client{
 			Timeout: 12 * time.Second,
 		},
-		cache: cache,
+		cache:   cache,
+		limiter: newTokenBucket(maxRPS),
 	}
 }
 
+func withRequestTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+	return context.WithTimeout(ctx, requestTimeout)
+}
+
+func cacheGetTyped[T any](cache Cache, key string) (*T, bool) {
+	if cache == nil {
+		return nil, false
+	}
+	val, ok := cache.Get(key)
+	if !ok {
+		return nil, false
+	}
+	typed, ok := val.(*T)
+	if !ok {
+		return nil, false
+	}
+	return typed, true
+}
+
 func (c *HTTPClient) doRequest(ctx context.Context, endpoint string, target interface{}) error {
+	ctx, cancel := withRequestTimeout(ctx)
+	defer cancel()
+
+	if err := c.limiter.Wait(ctx); err != nil {
+		return fmt.Errorf("rate limiter: %w", err)
+	}
+
 	reqURL := fmt.Sprintf("%s%s", c.baseURL, endpoint)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
@@ -46,7 +89,7 @@ func (c *HTTPClient) doRequest(ctx context.Context, endpoint string, target inte
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", c.userAgent)
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := c.httpClient.Do(req)
@@ -76,56 +119,71 @@ func (c *HTTPClient) doRequest(ctx context.Context, endpoint string, target inte
 
 func (c *HTTPClient) GetBootstrapStatic(ctx context.Context) (*BootstrapStatic, error) {
 	cacheKey := "fpl:bootstrap_static"
-	if val, ok := c.cache.Get(cacheKey); ok {
-		if data, ok := val.(*BootstrapStatic); ok {
+	if data, ok := cacheGetTyped[BootstrapStatic](c.cache, cacheKey); ok {
+		return data, nil
+	}
+
+	v, err := c.group.Do(cacheKey, func() (interface{}, error) {
+		if data, ok := cacheGetTyped[BootstrapStatic](c.cache, cacheKey); ok {
 			return data, nil
 		}
+		var data BootstrapStatic
+		if err := c.doRequest(ctx, "/bootstrap-static/", &data); err != nil {
+			return nil, fmt.Errorf("GetBootstrapStatic: %w", err)
+		}
+		c.cache.Set(cacheKey, &data, 1*time.Hour)
+		return &data, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	var data BootstrapStatic
-	if err := c.doRequest(ctx, "/bootstrap-static/", &data); err != nil {
-		return nil, fmt.Errorf("GetBootstrapStatic: %w", err)
-	}
-
-	// Cache for 1 hour
-	c.cache.Set(cacheKey, &data, 1*time.Hour)
-	return &data, nil
+	return v.(*BootstrapStatic), nil
 }
 
 func (c *HTTPClient) GetEntry(ctx context.Context, teamID int) (*Entry, error) {
 	cacheKey := fmt.Sprintf("fpl:entry:%d", teamID)
-	if val, ok := c.cache.Get(cacheKey); ok {
-		if data, ok := val.(*Entry); ok {
+	if data, ok := cacheGetTyped[Entry](c.cache, cacheKey); ok {
+		return data, nil
+	}
+
+	v, err := c.group.Do(cacheKey, func() (interface{}, error) {
+		if data, ok := cacheGetTyped[Entry](c.cache, cacheKey); ok {
 			return data, nil
 		}
+		var data Entry
+		if err := c.doRequest(ctx, fmt.Sprintf("/entry/%d/", teamID), &data); err != nil {
+			return nil, fmt.Errorf("GetEntry: %w", err)
+		}
+		c.cache.Set(cacheKey, &data, 15*time.Minute)
+		return &data, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	var data Entry
-	if err := c.doRequest(ctx, fmt.Sprintf("/entry/%d/", teamID), &data); err != nil {
-		return nil, fmt.Errorf("GetEntry: %w", err)
-	}
-
-	// Cache for 15 minutes
-	c.cache.Set(cacheKey, &data, 15*time.Minute)
-	return &data, nil
+	return v.(*Entry), nil
 }
 
 func (c *HTTPClient) GetPicks(ctx context.Context, teamID int, event int) (*PicksResponse, error) {
 	cacheKey := fmt.Sprintf("fpl:picks:%d:gw:%d", teamID, event)
-	if val, ok := c.cache.Get(cacheKey); ok {
-		if data, ok := val.(*PicksResponse); ok {
+	if data, ok := cacheGetTyped[PicksResponse](c.cache, cacheKey); ok {
+		return data, nil
+	}
+
+	v, err := c.group.Do(cacheKey, func() (interface{}, error) {
+		if data, ok := cacheGetTyped[PicksResponse](c.cache, cacheKey); ok {
 			return data, nil
 		}
+		var data PicksResponse
+		if err := c.doRequest(ctx, fmt.Sprintf("/entry/%d/event/%d/picks/", teamID, event), &data); err != nil {
+			return nil, fmt.Errorf("GetPicks: %w", err)
+		}
+		c.cache.Set(cacheKey, &data, 5*time.Minute)
+		return &data, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	var data PicksResponse
-	if err := c.doRequest(ctx, fmt.Sprintf("/entry/%d/event/%d/picks/", teamID, event), &data); err != nil {
-		return nil, fmt.Errorf("GetPicks: %w", err)
-	}
-
-	// Cache for 5 minutes
-	c.cache.Set(cacheKey, &data, 5*time.Minute)
-	return &data, nil
+	return v.(*PicksResponse), nil
 }
 
 func (c *HTTPClient) GetFixtures(ctx context.Context, event *int) ([]Fixture, error) {
@@ -142,12 +200,21 @@ func (c *HTTPClient) GetFixtures(ctx context.Context, event *int) ([]Fixture, er
 		}
 	}
 
-	var data []Fixture
-	if err := c.doRequest(ctx, endpoint, &data); err != nil {
-		return nil, fmt.Errorf("GetFixtures: %w", err)
+	v, err := c.group.Do(cacheKey, func() (interface{}, error) {
+		if val, ok := c.cache.Get(cacheKey); ok {
+			if data, ok := val.([]Fixture); ok {
+				return data, nil
+			}
+		}
+		var data []Fixture
+		if err := c.doRequest(ctx, endpoint, &data); err != nil {
+			return nil, fmt.Errorf("GetFixtures: %w", err)
+		}
+		c.cache.Set(cacheKey, data, 3*time.Hour)
+		return data, nil
+	})
+	if err != nil {
+		return nil, err
 	}
-
-	// Cache for 2 hours
-	c.cache.Set(cacheKey, data, 2*time.Hour)
-	return data, nil
+	return v.([]Fixture), nil
 }

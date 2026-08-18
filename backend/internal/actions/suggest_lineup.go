@@ -2,9 +2,12 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
+
+	"github.com/gofiber/fiber/v2"
+
+	"fpl-assistant/internal/db"
 	"fpl-assistant/internal/fpl"
 	"fpl-assistant/internal/scoring"
 )
@@ -28,13 +31,15 @@ type SuggestLineupAction struct {
 	client    fpl.Client
 	engine    scoring.Engine
 	optimizer scoring.Optimizer
+	db        *db.Database
 }
 
-func NewSuggestLineupAction(client fpl.Client, engine scoring.Engine, optimizer scoring.Optimizer) *SuggestLineupAction {
+func NewSuggestLineupAction(client fpl.Client, engine scoring.Engine, optimizer scoring.Optimizer, database *db.Database) *SuggestLineupAction {
 	return &SuggestLineupAction{
 		client:    client,
 		engine:    engine,
 		optimizer: optimizer,
+		db:        database,
 	}
 }
 
@@ -53,33 +58,16 @@ func (a *SuggestLineupAction) Execute(ctx context.Context, input SuggestLineupIn
 		return nil, fmt.Errorf("suggest_lineup: failed to fetch fixtures: %w", err)
 	}
 
-	targetGW := 1
-	if input.Gameweek != nil && *input.Gameweek > 0 {
-		targetGW = *input.Gameweek
-	} else {
-		for _, ev := range bootstrap.Events {
-			if ev.IsCurrent {
-				targetGW = ev.ID
-				break
-			} else if ev.IsNext {
-				targetGW = ev.ID
-			}
-		}
-	}
+	targetGW := resolveGameweek(bootstrap.Events, input.Gameweek)
 
 	picksResp, err := a.client.GetPicks(ctx, input.TeamID, targetGW)
 	if err != nil {
 		return nil, fmt.Errorf("suggest_lineup: failed to fetch squad picks for GW %d: %w", targetGW, err)
 	}
 
-	elementMap := make(map[int]fpl.Element)
-	for _, el := range bootstrap.Elements {
-		elementMap[el.ID] = el
-	}
-	teamMap := make(map[int]fpl.Team)
-	for _, tm := range bootstrap.Teams {
-		teamMap[tm.ID] = tm
-	}
+	elementMap := buildElementMap(bootstrap.Elements)
+	teamMap := buildTeamMap(bootstrap.Teams)
+	fixIndex := scoring.NewFixtureIndex(fixtures)
 
 	var projections []scoring.PlayerProjection
 	var currentPicksXP float64
@@ -90,10 +78,9 @@ func (a *SuggestLineupAction) Execute(ctx context.Context, input SuggestLineupIn
 			continue
 		}
 
-		proj := a.engine.CalculatePlayerXP(&el, teamMap, fixtures, targetGW)
+		proj := a.engine.CalculatePlayerXPIndexed(&el, teamMap, fixIndex, targetGW)
 		projections = append(projections, proj)
 
-		// Calculate current pick lineup XP
 		if pick.Position <= 11 {
 			multiplier := pick.Multiplier
 			if multiplier <= 0 {
@@ -115,9 +102,20 @@ func (a *SuggestLineupAction) Execute(ctx context.Context, input SuggestLineupIn
 
 	var recs []string
 	recs = append(recs, fmt.Sprintf("Recommended formation: %s for optimal expected points.", optimal.Formation))
-	recs = append(recs, fmt.Sprintf("Captain %s (Projected: %.1f pts) and Vice-Captain %s.", optimal.CaptainName, optimal.StartingXI[0].ProjectedXP, optimal.ViceCaptainName))
+	captainXP := 0.0
+	for _, p := range optimal.StartingXI {
+		if p.PlayerID == optimal.CaptainID {
+			captainXP = p.ProjectedXP
+			break
+		}
+	}
+	recs = append(recs, fmt.Sprintf("Captain %s (Projected: %.1f pts) and Vice-Captain %s.", optimal.CaptainName, captainXP, optimal.ViceCaptainName))
 	if len(optimal.Bench) > 1 {
 		recs = append(recs, fmt.Sprintf("Priority 1 Bench Substitute: %s (xP: %.1f).", optimal.Bench[1].WebName, optimal.Bench[1].ProjectedXP))
+	}
+
+	if err := a.db.SaveProjectionSnapshot(ctx, input.TeamID, targetGW, optimal.Formation, optimal.CaptainName, optimal.ViceCaptainName, optimal.TotalProjectedXP); err != nil {
+		log.Printf("suggest_lineup: persist snapshot: %v", err)
 	}
 
 	return &SuggestLineupOutput{
@@ -131,19 +129,22 @@ func (a *SuggestLineupAction) Execute(ctx context.Context, input SuggestLineupIn
 	}, nil
 }
 
-func (a *SuggestLineupAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *SuggestLineupAction) Handle(c *fiber.Ctx) error {
 	var input SuggestLineupInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"bad_request","message":%q}`, err.Error()), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
 	}
 
-	res, err := a.Execute(r.Context(), input)
+	res, err := a.Execute(c.UserContext(), input)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"execution_failed","message":%q}`, err.Error()), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "execution_failed",
+			"message": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(res)
+	return c.JSON(res)
 }

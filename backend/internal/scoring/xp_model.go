@@ -1,31 +1,32 @@
 package scoring
 
 import (
+	"fpl-assistant/internal/fpl"
 	"math"
 	"strconv"
-	"fpl-assistant/internal/fpl"
 )
 
 // PlayerProjection holds projected points and fixture context for a specific gameweek
 type PlayerProjection struct {
-	PlayerID            int     `json:"player_id"`
-	WebName             string  `json:"web_name"`
-	TeamShortName       string  `json:"team_short_name"`
-	ElementType         int     `json:"element_type"` // 1=GKP, 2=DEF, 3=MID, 4=FWD
-	Gameweek            int     `json:"gameweek"`
-	OpponentShortName   string  `json:"opponent_short_name"`
-	IsHome              bool    `json:"is_home"`
-	FDR                 int     `json:"fdr"`
-	AvailabilityChance  int     `json:"availability_chance"`
-	StatusBadge         string  `json:"status_badge"` // success, warning, caution, danger
-	ProjectedXP         float64 `json:"projected_xp"`
-	ProjectedGoals      float64 `json:"projected_goals"`
-	ProjectedAssists    float64 `json:"projected_assists"`
-	CleanSheetProb      float64 `json:"clean_sheet_prob"`
+	PlayerID           int     `json:"player_id"`
+	WebName            string  `json:"web_name"`
+	TeamShortName      string  `json:"team_short_name"`
+	ElementType        int     `json:"element_type"` // 1=GKP, 2=DEF, 3=MID, 4=FWD
+	Gameweek           int     `json:"gameweek"`
+	OpponentShortName  string  `json:"opponent_short_name"`
+	IsHome             bool    `json:"is_home"`
+	FDR                int     `json:"fdr"`
+	AvailabilityChance int     `json:"availability_chance"`
+	StatusBadge        string  `json:"status_badge"` // success, warning, caution, danger
+	ProjectedXP        float64 `json:"projected_xp"`
+	ProjectedGoals     float64 `json:"projected_goals"`
+	ProjectedAssists   float64 `json:"projected_assists"`
+	CleanSheetProb     float64 `json:"clean_sheet_prob"`
 }
 
 type Engine interface {
 	CalculatePlayerXP(element *fpl.Element, teamMap map[int]fpl.Team, fixtures []fpl.Fixture, targetGW int) PlayerProjection
+	CalculatePlayerXPIndexed(element *fpl.Element, teamMap map[int]fpl.Team, idx *FixtureIndex, targetGW int) PlayerProjection
 	CalculateMultiGWProjections(elements []*fpl.Element, teamMap map[int]fpl.Team, fixtures []fpl.Fixture, startGW int, endGW int) map[int][]PlayerProjection
 }
 
@@ -35,8 +36,14 @@ func NewXPEngine() *XPEngine {
 	return &XPEngine{}
 }
 
-// CalculatePlayerXP projects points for a single player in a single gameweek
+// CalculatePlayerXP projects points for a single player in a single gameweek.
+// Prefer CalculatePlayerXPIndexed when scoring many players against the same fixture list.
 func (e *XPEngine) CalculatePlayerXP(element *fpl.Element, teamMap map[int]fpl.Team, fixtures []fpl.Fixture, targetGW int) PlayerProjection {
+	return e.CalculatePlayerXPIndexed(element, teamMap, NewFixtureIndex(fixtures), targetGW)
+}
+
+// CalculatePlayerXPIndexed is the hot-path xP calculator. Callers MUST build FixtureIndex once.
+func (e *XPEngine) CalculatePlayerXPIndexed(element *fpl.Element, teamMap map[int]fpl.Team, idx *FixtureIndex, targetGW int) PlayerProjection {
 	proj := PlayerProjection{
 		PlayerID:           element.ID,
 		WebName:            element.WebName,
@@ -86,15 +93,7 @@ func (e *XPEngine) CalculatePlayerXP(element *fpl.Element, teamMap map[int]fpl.T
 		return proj
 	}
 
-	// 2. Find Fixtures for Target Gameweek
-	var gwFixtures []fpl.Fixture
-	for _, fix := range fixtures {
-		if fix.Event != nil && *fix.Event == targetGW {
-			if fix.TeamH == element.Team || fix.TeamA == element.Team {
-				gwFixtures = append(gwFixtures, fix)
-			}
-		}
-	}
+	gwFixtures := idx.ForTeamGW(element.Team, targetGW)
 
 	// Blank Gameweek
 	if len(gwFixtures) == 0 {
@@ -191,11 +190,12 @@ func (e *XPEngine) CalculatePlayerXP(element *fpl.Element, teamMap map[int]fpl.T
 // CalculateMultiGWProjections calculates xP across multiple upcoming gameweeks
 func (e *XPEngine) CalculateMultiGWProjections(elements []*fpl.Element, teamMap map[int]fpl.Team, fixtures []fpl.Fixture, startGW int, endGW int) map[int][]PlayerProjection {
 	result := make(map[int][]PlayerProjection)
+	idx := NewFixtureIndex(fixtures)
 
 	for _, elem := range elements {
 		var projections []PlayerProjection
 		for gw := startGW; gw <= endGW; gw++ {
-			p := e.CalculatePlayerXP(elem, teamMap, fixtures, gw)
+			p := e.CalculatePlayerXPIndexed(elem, teamMap, idx, gw)
 			projections = append(projections, p)
 		}
 		result[elem.ID] = projections

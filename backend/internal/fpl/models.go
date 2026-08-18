@@ -12,21 +12,21 @@ type BootstrapStatic struct {
 
 // Event represents a gameweek schedule & state
 type Event struct {
-	ID                     int       `json:"id"`
-	Name                   string    `json:"name"`
-	DeadlineTime           time.Time `json:"deadline_time"`
-	AverageEntryScore      int       `json:"average_entry_score"`
-	Finished               bool      `json:"finished"`
-	DataChecked            bool      `json:"data_checked"`
-	HighestScoringEntry    *int      `json:"highest_scoring_entry"`
-	DeadlineTimeEpoch      int64     `json:"deadline_time_epoch"`
-	DeadlineTimeGameOffset int       `json:"deadline_time_game_offset"`
-	HighestScore           *int      `json:"highest_score"`
-	IsPrevious             bool      `json:"is_previous"`
-	IsCurrent              bool      `json:"is_current"`
-	IsNext                 bool      `json:"is_next"`
-	CupLeaguesCreated      bool      `json:"cup_leagues_created"`
-	H2HkoMatchesCreated    bool      `json:"h2h_ko_matches_created"`
+	ID                     int        `json:"id"`
+	Name                   string     `json:"name"`
+	DeadlineTime           time.Time  `json:"deadline_time"`
+	AverageEntryScore      int        `json:"average_entry_score"`
+	Finished               bool       `json:"finished"`
+	DataChecked            bool       `json:"data_checked"`
+	HighestScoringEntry    *int       `json:"highest_scoring_entry"`
+	DeadlineTimeEpoch      int64      `json:"deadline_time_epoch"`
+	DeadlineTimeGameOffset int        `json:"deadline_time_game_offset"`
+	HighestScore           *int       `json:"highest_score"`
+	IsPrevious             bool       `json:"is_previous"`
+	IsCurrent              bool       `json:"is_current"`
+	IsNext                 bool       `json:"is_next"`
+	CupLeaguesCreated      bool       `json:"cup_leagues_created"`
+	H2HkoMatchesCreated    bool       `json:"h2h_ko_matches_created"`
 	ChipPlays              []ChipPlay `json:"chip_plays"`
 }
 
@@ -37,29 +37,29 @@ type ChipPlay struct {
 
 // Team represents a Premier League club
 type Team struct {
-	ID                int    `json:"id"`
-	Code              int    `json:"code"`
-	Name              string `json:"name"`
-	ShortName         string `json:"short_name"`
-	Strength          int    `json:"strength"`
-	StrengthOverallHome int  `json:"strength_overall_home"`
-	StrengthOverallAway int  `json:"strength_overall_away"`
-	StrengthAttackHome  int  `json:"strength_attack_home"`
-	StrengthAttackAway  int  `json:"strength_attack_away"`
-	StrengthDefenceHome int  `json:"strength_defence_home"`
-	StrengthDefenceAway int  `json:"strength_defence_away"`
+	ID                  int    `json:"id"`
+	Code                int    `json:"code"`
+	Name                string `json:"name"`
+	ShortName           string `json:"short_name"`
+	Strength            int    `json:"strength"`
+	StrengthOverallHome int    `json:"strength_overall_home"`
+	StrengthOverallAway int    `json:"strength_overall_away"`
+	StrengthAttackHome  int    `json:"strength_attack_home"`
+	StrengthAttackAway  int    `json:"strength_attack_away"`
+	StrengthDefenceHome int    `json:"strength_defence_home"`
+	StrengthDefenceAway int    `json:"strength_defence_away"`
 }
 
 // ElementType represents positions: 1=GKP, 2=DEF, 3=MID, 4=FWD
 type ElementType struct {
-	ID                 int    `json:"id"`
-	PluralName         string `json:"plural_name"`
-	PluralNameShort    string `json:"plural_name_short"`
-	SingularName       string `json:"singular_name"`
-	SingularNameShort   string `json:"singular_name_short"`
-	SquadSelect        int    `json:"squad_select"`
-	SquadMinPlay       int    `json:"squad_min_play"`
-	SquadMaxPlay       int    `json:"squad_max_play"`
+	ID                int    `json:"id"`
+	PluralName        string `json:"plural_name"`
+	PluralNameShort   string `json:"plural_name_short"`
+	SingularName      string `json:"singular_name"`
+	SingularNameShort string `json:"singular_name_short"`
+	SquadSelect       int    `json:"squad_select"`
+	SquadMinPlay      int    `json:"squad_min_play"`
+	SquadMaxPlay      int    `json:"squad_max_play"`
 }
 
 // Element represents an individual player
@@ -108,20 +108,20 @@ type Element struct {
 
 // Entry represents a user's manager profile from /api/entry/{team_id}/
 type Entry struct {
-	ID                   int    `json:"id"`
-	PlayerFirstName      string `json:"player_first_name"`
-	PlayerLastName       string `json:"player_last_name"`
-	PlayerRegionName     string `json:"player_region_name"`
-	SummaryOverallPoints int    `json:"summary_overall_points"`
-	SummaryOverallRank   int    `json:"summary_overall_rank"`
-	SummaryEventPoints   int    `json:"summary_event_points"`
-	SummaryEventRank     int    `json:"summary_event_rank"`
-	CurrentEvent         int    `json:"current_event"`
-	Name                 string `json:"name"`
-	LastDeadlineBank     int    `json:"last_deadline_bank"`
-	LastDeadlineValue    int    `json:"last_deadline_value"`
-	LastDeadlineTotalTransfers int `json:"last_deadline_total_transfers"`
-	Leagues              EntryLeagues `json:"leagues"`
+	ID                         int          `json:"id"`
+	PlayerFirstName            string       `json:"player_first_name"`
+	PlayerLastName             string       `json:"player_last_name"`
+	PlayerRegionName           string       `json:"player_region_name"`
+	SummaryOverallPoints       int          `json:"summary_overall_points"`
+	SummaryOverallRank         int          `json:"summary_overall_rank"`
+	SummaryEventPoints         int          `json:"summary_event_points"`
+	SummaryEventRank           int          `json:"summary_event_rank"`
+	CurrentEvent               int          `json:"current_event"`
+	Name                       string       `json:"name"`
+	LastDeadlineBank           int          `json:"last_deadline_bank"`
+	LastDeadlineValue          int          `json:"last_deadline_value"`
+	LastDeadlineTotalTransfers int          `json:"last_deadline_total_transfers"`
+	Leagues                    EntryLeagues `json:"leagues"`
 }
 
 type EntryLeagues struct {
@@ -130,17 +130,17 @@ type EntryLeagues struct {
 }
 
 type ClassicLeague struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	EntryRank   int    `json:"entry_rank"`
-	EntryLastRank int  `json:"entry_last_rank"`
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	EntryRank     int    `json:"entry_rank"`
+	EntryLastRank int    `json:"entry_last_rank"`
 }
 
 type H2HLeague struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	EntryRank   int    `json:"entry_rank"`
-	EntryLastRank int  `json:"entry_last_rank"`
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	EntryRank     int    `json:"entry_rank"`
+	EntryLastRank int    `json:"entry_last_rank"`
 }
 
 // PicksResponse represents the payload from /api/entry/{team_id}/event/{gw}/picks/
@@ -151,22 +151,22 @@ type PicksResponse struct {
 }
 
 type EntryHistory struct {
-	Event            int `json:"event"`
-	Points           int `json:"points"`
-	TotalPoints      int `json:"total_points"`
-	Rank             int `json:"rank"`
-	RankSort         int `json:"rank_sort"`
-	OverallRank      int `json:"overall_rank"`
-	Bank             int `json:"bank"`
-	Value            int `json:"value"`
-	EventTransfers   int `json:"event_transfers"`
+	Event              int `json:"event"`
+	Points             int `json:"points"`
+	TotalPoints        int `json:"total_points"`
+	Rank               int `json:"rank"`
+	RankSort           int `json:"rank_sort"`
+	OverallRank        int `json:"overall_rank"`
+	Bank               int `json:"bank"`
+	Value              int `json:"value"`
+	EventTransfers     int `json:"event_transfers"`
 	EventTransfersCost int `json:"event_transfers_cost"`
-	PointsOnBench    int `json:"points_on_bench"`
+	PointsOnBench      int `json:"points_on_bench"`
 }
 
 type Pick struct {
-	Element       int  `json:"element"` // Player ID
-	Position      int  `json:"position"` // 1-15
+	Element       int  `json:"element"`    // Player ID
+	Position      int  `json:"position"`   // 1-15
 	Multiplier    int  `json:"multiplier"` // 0=benched, 1=playing, 2=captain, 3=triple captain
 	IsCaptain     bool `json:"is_captain"`
 	IsViceCaptain bool `json:"is_vice_captain"`

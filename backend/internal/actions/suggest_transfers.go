@@ -2,13 +2,12 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"math"
-	"net/http"
-	"sort"
 	"fpl-assistant/internal/fpl"
 	"fpl-assistant/internal/scoring"
+	"github.com/gofiber/fiber/v2"
+	"math"
+	"sort"
 )
 
 type SuggestTransfersInput struct {
@@ -75,70 +74,52 @@ func (a *SuggestTransfersAction) Execute(ctx context.Context, input SuggestTrans
 		return nil, fmt.Errorf("suggest_transfers: failed to fetch fixtures: %w", err)
 	}
 
-	targetGW := 1
-	if input.Gameweek != nil && *input.Gameweek > 0 {
-		targetGW = *input.Gameweek
-	} else {
-		for _, ev := range bootstrap.Events {
-			if ev.IsCurrent {
-				targetGW = ev.ID
-				break
-			} else if ev.IsNext {
-				targetGW = ev.ID
-			}
-		}
-	}
+	targetGW := resolveGameweek(bootstrap.Events, input.Gameweek)
 
 	picksResp, err := a.client.GetPicks(ctx, input.TeamID, targetGW)
 	if err != nil {
 		return nil, fmt.Errorf("suggest_transfers: failed to fetch squad picks for GW %d: %w", targetGW, err)
 	}
 
-	elementMap := make(map[int]fpl.Element)
-	for _, el := range bootstrap.Elements {
-		elementMap[el.ID] = el
-	}
-	teamMap := make(map[int]fpl.Team)
-	for _, tm := range bootstrap.Teams {
-		teamMap[tm.ID] = tm
-	}
-	posMap := map[int]string{1: "GKP", 2: "DEF", 3: "MID", 4: "FWD"}
+	elementMap := buildElementMap(bootstrap.Elements)
+	teamMap := buildTeamMap(bootstrap.Teams)
+	fixIndex := scoring.NewFixtureIndex(fixtures)
 
 	bankTenths := entry.LastDeadlineBank
 	bankMillions := float64(bankTenths) / 10.0
 
-	// Set of current squad IDs
 	squadIDs := make(map[int]bool)
 	var squadProjections []scoring.PlayerProjection
 	for _, p := range picksResp.Picks {
 		squadIDs[p.Element] = true
 		if el, ok := elementMap[p.Element]; ok {
-			proj := a.engine.CalculatePlayerXP(&el, teamMap, fixtures, targetGW)
+			proj := a.engine.CalculatePlayerXPIndexed(&el, teamMap, fixIndex, targetGW)
 			squadProjections = append(squadProjections, proj)
 		}
 	}
 
-	// Group all potential transfers by position
 	candidatesByPos := make(map[int][]scoring.PlayerProjection)
 	for _, el := range bootstrap.Elements {
 		if squadIDs[el.ID] {
 			continue
 		}
-		// Skip long-term injured or unselected
 		if el.Status == "i" || el.Status == "u" || el.Status == "s" {
 			continue
 		}
-		proj := a.engine.CalculatePlayerXP(&el, teamMap, fixtures, targetGW)
+		proj := a.engine.CalculatePlayerXPIndexed(&el, teamMap, fixIndex, targetGW)
 		if proj.ProjectedXP > 3.5 {
 			candidatesByPos[el.ElementType] = append(candidatesByPos[el.ElementType], proj)
 		}
 	}
 
-	// Sort candidates by projected xP descending
+	const maxCandidatesPerPos = 25
 	for pos := range candidatesByPos {
 		sort.Slice(candidatesByPos[pos], func(i, j int) bool {
 			return candidatesByPos[pos][i].ProjectedXP > candidatesByPos[pos][j].ProjectedXP
 		})
+		if len(candidatesByPos[pos]) > maxCandidatesPerPos {
+			candidatesByPos[pos] = candidatesByPos[pos][:maxCandidatesPerPos]
+		}
 	}
 
 	var recs []TransferRecommendation
@@ -172,16 +153,15 @@ func (a *SuggestTransfersAction) Execute(ctx context.Context, input SuggestTrans
 						PlayerInXP:     inProj.ProjectedXP,
 						NetXPGain:      math.Round(xpGain*10) / 10,
 						CostDifference: float64(inEl.NowCost-outEl.NowCost) / 10.0,
-						PositionName:   posMap[outProj.ElementType],
+						PositionName:   positionNames[outProj.ElementType],
 						Reason:         reason,
 					})
-					break // Take top candidate per squad member
+					break
 				}
 			}
 		}
 	}
 
-	// Sort recommendations by net XP gain descending
 	sort.Slice(recs, func(i, j int) bool {
 		return recs[i].NetXPGain > recs[j].NetXPGain
 	})
@@ -203,19 +183,22 @@ func (a *SuggestTransfersAction) Execute(ctx context.Context, input SuggestTrans
 	}, nil
 }
 
-func (a *SuggestTransfersAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (a *SuggestTransfersAction) Handle(c *fiber.Ctx) error {
 	var input SuggestTransfersInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"bad_request","message":%q}`, err.Error()), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
 	}
 
-	res, err := a.Execute(r.Context(), input)
+	res, err := a.Execute(c.UserContext(), input)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"execution_failed","message":%q}`, err.Error()), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "execution_failed",
+			"message": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(res)
+	return c.JSON(res)
 }

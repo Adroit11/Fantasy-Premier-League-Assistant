@@ -2,9 +2,12 @@ package actions
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
+
+	"github.com/gofiber/fiber/v2"
+
+	"fpl-assistant/internal/db"
 	"fpl-assistant/internal/fpl"
 )
 
@@ -15,28 +18,30 @@ type ConnectTeamInput struct {
 
 // ConnectTeamOutput represents the manager summary and squad info
 type ConnectTeamOutput struct {
-	TeamID           int                  `json:"team_id"`
-	ManagerName      string               `json:"manager_name"`
-	TeamName         string               `json:"team_name"`
-	OverallRank      int                  `json:"overall_rank"`
-	TotalPoints      int                  `json:"total_points"`
-	CurrentGameweek  int                  `json:"current_gameweek"`
-	Bank             float64              `json:"bank"`       // in millions (e.g. 1.5m)
-	TeamValue        float64              `json:"team_value"` // in millions (e.g. 102.5m)
-	ActiveChip       *string              `json:"active_chip"`
-	ClassicLeagues   []fpl.ClassicLeague  `json:"classic_leagues"`
-	PicksCount       int                  `json:"picks_count"`
-	Message          string               `json:"message"`
+	TeamID          int                 `json:"team_id"`
+	ManagerName     string              `json:"manager_name"`
+	TeamName        string              `json:"team_name"`
+	OverallRank     int                 `json:"overall_rank"`
+	TotalPoints     int                 `json:"total_points"`
+	CurrentGameweek int                 `json:"current_gameweek"`
+	Bank            float64             `json:"bank"`       // in millions (e.g. 1.5m)
+	TeamValue       float64             `json:"team_value"` // in millions (e.g. 102.5m)
+	ActiveChip      *string             `json:"active_chip"`
+	ClassicLeagues  []fpl.ClassicLeague `json:"classic_leagues"`
+	PicksCount      int                 `json:"picks_count"`
+	Message         string              `json:"message"`
 }
 
-// ConnectTeamAction handles manager authentication & initial squad sync
+// ConnectTeamAction handles manager authentication, initial squad sync, and MySQL persistence
 type ConnectTeamAction struct {
 	client fpl.Client
+	db     *db.Database
 }
 
-func NewConnectTeamAction(client fpl.Client) *ConnectTeamAction {
+func NewConnectTeamAction(client fpl.Client, database *db.Database) *ConnectTeamAction {
 	return &ConnectTeamAction{
 		client: client,
+		db:     database,
 	}
 }
 
@@ -55,16 +60,7 @@ func (a *ConnectTeamAction) Execute(ctx context.Context, input ConnectTeamInput)
 		return nil, fmt.Errorf("connect_team: failed to load bootstrap data: %w", err)
 	}
 
-	// Determine current or next active gameweek
-	activeGW := 1
-	for _, ev := range bootstrap.Events {
-		if ev.IsCurrent {
-			activeGW = ev.ID
-			break
-		} else if ev.IsNext {
-			activeGW = ev.ID
-		}
-	}
+	activeGW := resolveActiveGameweek(bootstrap.Events)
 
 	picksResp, err := a.client.GetPicks(ctx, input.TeamID, activeGW)
 	var activeChip *string
@@ -76,10 +72,15 @@ func (a *ConnectTeamAction) Execute(ctx context.Context, input ConnectTeamInput)
 
 	bankMillions := float64(entry.LastDeadlineBank) / 10.0
 	valueMillions := float64(entry.LastDeadlineValue) / 10.0
+	managerName := fmt.Sprintf("%s %s", entry.PlayerFirstName, entry.PlayerLastName)
+
+	if err := a.db.SaveManagerTeam(ctx, input.TeamID, managerName, entry.Name, entry.SummaryOverallRank, entry.SummaryOverallPoints, activeGW, bankMillions, valueMillions); err != nil {
+		log.Printf("connect_team: persist manager: %v", err)
+	}
 
 	return &ConnectTeamOutput{
 		TeamID:          input.TeamID,
-		ManagerName:     fmt.Sprintf("%s %s", entry.PlayerFirstName, entry.PlayerLastName),
+		ManagerName:     managerName,
 		TeamName:        entry.Name,
 		OverallRank:     entry.SummaryOverallRank,
 		TotalPoints:     entry.SummaryOverallPoints,
@@ -93,19 +94,23 @@ func (a *ConnectTeamAction) Execute(ctx context.Context, input ConnectTeamInput)
 	}, nil
 }
 
-func (a *ConnectTeamAction) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+// Handle Fiber HTTP Endpoint Adapter
+func (a *ConnectTeamAction) Handle(c *fiber.Ctx) error {
 	var input ConnectTeamInput
-	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"bad_request","message":%q}`, err.Error()), http.StatusBadRequest)
-		return
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "bad_request",
+			"message": err.Error(),
+		})
 	}
 
-	res, err := a.Execute(r.Context(), input)
+	res, err := a.Execute(c.UserContext(), input)
 	if err != nil {
-		http.Error(w, fmt.Sprintf(`{"error":"execution_failed","message":%q}`, err.Error()), http.StatusInternalServerError)
-		return
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "execution_failed",
+			"message": err.Error(),
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(res)
+	return c.JSON(res)
 }

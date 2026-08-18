@@ -2,16 +2,16 @@ package actions
 
 import (
 	"context"
-	"testing"
 	"fpl-assistant/internal/fpl"
 	"fpl-assistant/internal/scoring"
+	"testing"
 )
 
 type MockFPLClient struct {
-	Entry           *fpl.Entry
-	Bootstrap       *fpl.BootstrapStatic
-	Picks           *fpl.PicksResponse
-	Fixtures        []fpl.Fixture
+	Entry     *fpl.Entry
+	Bootstrap *fpl.BootstrapStatic
+	Picks     *fpl.PicksResponse
+	Fixtures  []fpl.Fixture
 }
 
 func (m *MockFPLClient) GetBootstrapStatic(ctx context.Context) (*fpl.BootstrapStatic, error) {
@@ -83,7 +83,7 @@ func createTestFixtureClient() *MockFPLClient {
 
 func TestConnectTeamAction(t *testing.T) {
 	mockClient := createTestFixtureClient()
-	action := NewConnectTeamAction(mockClient)
+	action := NewConnectTeamAction(mockClient, nil)
 
 	out, err := action.Execute(context.Background(), ConnectTeamInput{TeamID: 12345})
 	if err != nil {
@@ -107,7 +107,7 @@ func TestGetAvailabilityNewsAction(t *testing.T) {
 	mockClient.Bootstrap.Elements[0].Status = "i"
 	mockClient.Bootstrap.Elements[0].News = "Knee strain"
 
-	action := NewGetAvailabilityNewsAction(mockClient)
+	action := NewGetAvailabilityNewsAction(mockClient, nil)
 	teamID := 12345
 	out, err := action.Execute(context.Background(), GetAvailabilityNewsInput{TeamID: &teamID})
 	if err != nil {
@@ -126,7 +126,7 @@ func TestSuggestLineupAction(t *testing.T) {
 	mockClient := createTestFixtureClient()
 	engine := scoring.NewXPEngine()
 	optimizer := scoring.NewSquadOptimizer()
-	action := NewSuggestLineupAction(mockClient, engine, optimizer)
+	action := NewSuggestLineupAction(mockClient, engine, optimizer, nil)
 
 	out, err := action.Execute(context.Background(), SuggestLineupInput{TeamID: 12345})
 	if err != nil {
