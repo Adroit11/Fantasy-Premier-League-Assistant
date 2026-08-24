@@ -122,6 +122,31 @@ func (d *Database) migrate() error {
 			created_at DATETIME NOT NULL,
 			UNIQUE KEY uk_team_gw (team_id, gameweek)
 		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+		`CREATE TABLE IF NOT EXISTS ai_suggestions (
+			id BIGINT AUTO_INCREMENT PRIMARY KEY,
+			team_id INT NOT NULL,
+			gameweek INT NOT NULL,
+			suggestion LONGTEXT NOT NULL,
+			formation VARCHAR(10) DEFAULT '',
+			captain_name VARCHAR(100) DEFAULT '',
+			projected_xp DECIMAL(6,1) DEFAULT 0.0,
+			ai_model VARCHAR(60) NOT NULL,
+			created_at DATETIME NOT NULL,
+			UNIQUE KEY uk_team_gw (team_id, gameweek)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+
+		`CREATE TABLE IF NOT EXISTS gw_scores (
+			id BIGINT AUTO_INCREMENT PRIMARY KEY,
+			team_id INT NOT NULL,
+			gameweek INT NOT NULL,
+			actual_points INT NOT NULL DEFAULT 0,
+			ai_projected_xp DECIMAL(6,1) DEFAULT NULL,
+			delta DECIMAL(6,1) DEFAULT NULL,
+			recorded_at DATETIME NOT NULL,
+			UNIQUE KEY uk_team_gw (team_id, gameweek),
+			INDEX idx_team (team_id)
+		) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 	}
 
 	for _, q := range queries {
@@ -539,4 +564,134 @@ func decodeCacheValue(raw []byte) (interface{}, bool) {
 		}
 		return v, true
 	}
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Suggestions Persistence
+// ─────────────────────────────────────────────────────────────────────────────
+
+// AISuggestionRow is the data stored per AI team suggestion.
+type AISuggestionRow struct {
+	TeamID      int
+	Gameweek    int
+	Suggestion  string
+	Formation   string
+	CaptainName string
+	ProjectedXP float64
+	AIModel     string
+}
+
+// SaveAISuggestion upserts an AI suggestion for a given team+gameweek.
+func (d *Database) SaveAISuggestion(ctx context.Context, row AISuggestionRow) error {
+	if d == nil || d.SQL == nil {
+		return nil
+	}
+	query := `INSERT INTO ai_suggestions
+		(team_id, gameweek, suggestion, formation, captain_name, projected_xp, ai_model, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+		ON DUPLICATE KEY UPDATE
+			suggestion   = VALUES(suggestion),
+			formation    = VALUES(formation),
+			captain_name = VALUES(captain_name),
+			projected_xp = VALUES(projected_xp),
+			ai_model     = VALUES(ai_model),
+			created_at   = NOW()`
+
+	_, err := d.execLogged(ctx, query,
+		row.TeamID, row.Gameweek, row.Suggestion,
+		row.Formation, row.CaptainName, row.ProjectedXP, row.AIModel)
+	if err != nil {
+		return fmt.Errorf("save_ai_suggestion: %w", err)
+	}
+	return nil
+}
+
+// GetAISuggestion fetches the stored AI suggestion for a team+gameweek.
+// Returns (nil, nil) when no suggestion exists yet.
+func (d *Database) GetAISuggestion(ctx context.Context, teamID, gameweek int) (*AISuggestionRow, error) {
+	if d == nil || d.SQL == nil {
+		return nil, nil
+	}
+	query := `SELECT team_id, gameweek, suggestion, formation, captain_name, projected_xp, ai_model
+		FROM ai_suggestions WHERE team_id = ? AND gameweek = ? LIMIT 1`
+
+	var row AISuggestionRow
+	start := time.Now()
+	err := d.SQL.QueryRowContext(ctx, query, teamID, gameweek).Scan(
+		&row.TeamID, &row.Gameweek, &row.Suggestion,
+		&row.Formation, &row.CaptainName, &row.ProjectedXP, &row.AIModel,
+	)
+	logSlowQuery("query_row", query, start, err)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get_ai_suggestion: %w", err)
+	}
+	return &row, nil
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GW Score Persistence
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GWScoreRow is one gameweek score comparison record.
+type GWScoreRow struct {
+	TeamID        int
+	Gameweek      int
+	ActualPoints  int
+	AIProjectedXP float64
+	Delta         float64
+}
+
+// UpsertGWScore inserts or updates a gameweek score record.
+func (d *Database) UpsertGWScore(ctx context.Context, row GWScoreRow) error {
+	if d == nil || d.SQL == nil {
+		return nil
+	}
+	query := `INSERT INTO gw_scores
+		(team_id, gameweek, actual_points, ai_projected_xp, delta, recorded_at)
+		VALUES (?, ?, ?, ?, ?, NOW())
+		ON DUPLICATE KEY UPDATE
+			actual_points   = VALUES(actual_points),
+			ai_projected_xp = VALUES(ai_projected_xp),
+			delta           = VALUES(delta),
+			recorded_at     = NOW()`
+
+	_, err := d.execLogged(ctx, query,
+		row.TeamID, row.Gameweek, row.ActualPoints, row.AIProjectedXP, row.Delta)
+	if err != nil {
+		return fmt.Errorf("upsert_gw_score: %w", err)
+	}
+	return nil
+}
+
+// GetGWScores retrieves all recorded gameweek scores for a team, newest first.
+func (d *Database) GetGWScores(ctx context.Context, teamID, limit int) ([]GWScoreRow, error) {
+	if d == nil || d.SQL == nil {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 38
+	}
+	query := `SELECT team_id, gameweek, actual_points, COALESCE(ai_projected_xp, 0), COALESCE(delta, 0)
+		FROM gw_scores WHERE team_id = ? ORDER BY gameweek DESC LIMIT ?`
+
+	start := time.Now()
+	rows, err := d.SQL.QueryContext(ctx, query, teamID, limit)
+	logSlowQuery("query", query, start, err)
+	if err != nil {
+		return nil, fmt.Errorf("get_gw_scores: %w", err)
+	}
+	defer rows.Close()
+
+	var result []GWScoreRow
+	for rows.Next() {
+		var r GWScoreRow
+		if err := rows.Scan(&r.TeamID, &r.Gameweek, &r.ActualPoints, &r.AIProjectedXP, &r.Delta); err != nil {
+			return nil, fmt.Errorf("get_gw_scores: scan: %w", err)
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
 }

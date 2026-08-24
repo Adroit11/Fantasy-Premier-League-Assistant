@@ -17,3 +17,6 @@ frontend/.vite/
 *.log
 .env
 .DS_Store
+
+# Docker
+docker-compose.override.yml

@@ -1,0 +1,19 @@
+# Go build artifacts
+bin/
+*.exe
+
+# Test cache
+*.test
+*.out
+
+# Go module download cache (handled by docker layer caching via go.mod/go.sum)
+vendor/
+
+# Ignore local .env — secrets injected via compose environment
+.env
+
+# Editor / OS files
+.DS_Store
+*.swp
+*.idea/
+.vscode/

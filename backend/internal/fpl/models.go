@@ -164,6 +164,25 @@ type EntryHistory struct {
 	PointsOnBench      int `json:"points_on_bench"`
 }
 
+// EntryHistoryResponse is the payload from /api/entry/{id}/history/
+type EntryHistoryResponse struct {
+	Current []GWHistoryEntry `json:"current"`
+}
+
+// GWHistoryEntry holds the per-gameweek result for a manager
+type GWHistoryEntry struct {
+	Event              int `json:"event"`
+	Points             int `json:"points"`
+	TotalPoints        int `json:"total_points"`
+	Rank               int `json:"rank"`
+	OverallRank        int `json:"overall_rank"`
+	Bank               int `json:"bank"`
+	Value              int `json:"value"`
+	EventTransfers     int `json:"event_transfers"`
+	EventTransfersCost int `json:"event_transfers_cost"`
+	PointsOnBench      int `json:"points_on_bench"`
+}
+
 type Pick struct {
 	Element       int  `json:"element"`    // Player ID
 	Position      int  `json:"position"`   // 1-15

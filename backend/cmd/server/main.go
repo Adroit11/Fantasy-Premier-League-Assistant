@@ -43,9 +43,9 @@ func main() {
 	client := fpl.NewHTTPClient(cache, cfg.FPLBaseURL, cfg.FPLUserAgent)
 	engine := scoring.NewXPEngine()
 	optimizer := scoring.NewSquadOptimizer()
-	router := actions.NewRouter(client, engine, optimizer, database)
+	router := actions.NewRouter(client, engine, optimizer, database, cfg)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", *portFlag))
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", cfg.BindHost, *portFlag))
 	if err != nil {
 		log.Fatalf("[FATAL] Failed to bind port %d: %v", *portFlag, err)
 	}
@@ -53,7 +53,7 @@ func main() {
 	actualPort := listener.Addr().(*net.TCPAddr).Port
 	log.Printf("[FPL ASSISTANT CORE] Environment: %s", cfg.Environment)
 	log.Printf("[FPL ASSISTANT CORE] FPL API Base URL: %s", cfg.FPLBaseURL)
-	log.Printf("[FPL ASSISTANT CORE] Server listening on http://127.0.0.1:%d", actualPort)
+	log.Printf("[FPL ASSISTANT CORE] Server listening on http://%s:%d", cfg.BindHost, actualPort)
 
 	go func() {
 		if err := router.App.Listener(listener); err != nil {
