@@ -11,6 +11,7 @@ import (
 
 type Config struct {
 	Port         int
+	BindHost     string
 	FPLBaseURL   string
 	FPLUserAgent string
 	CacheTTL     time.Duration
@@ -23,6 +24,11 @@ type Config struct {
 	DBPassword string
 	DBName     string
 	DBEnabled  bool
+
+	// AI Configuration
+	GeminiAPIKey string
+	AIModel      string // e.g. "gemini-2.0-flash"
+	AIProvider   string // "gemini" | "openai"
 }
 
 func (c *Config) MySQLDSN() string {
@@ -42,6 +48,9 @@ func LoadConfig() *Config {
 	loadDotEnv("../../.env")
 
 	port := getEnvInt("PORT", getEnvInt("BACKEND_PORT", 18492))
+	// BIND_HOST controls the network interface. Defaults to loopback for local dev;
+	// Docker sets it to 0.0.0.0 via ENV in the Dockerfile.
+	bindHost := getEnv("BIND_HOST", "127.0.0.1")
 	baseURL := getEnv("FPL_BASE_URL", "https://fantasy.premierleague.com/api")
 	userAgent := getEnv("FPL_USER_AGENT", "FPL-Assistant-Desktop/1.0 (Go; Windows)")
 	cacheTTLMin := getEnvInt("CACHE_TTL_MINUTES", 60)
@@ -57,6 +66,7 @@ func LoadConfig() *Config {
 
 	return &Config{
 		Port:         port,
+		BindHost:     bindHost,
 		FPLBaseURL:   baseURL,
 		FPLUserAgent: userAgent,
 		CacheTTL:     time.Duration(cacheTTLMin) * time.Minute,
@@ -67,6 +77,10 @@ func LoadConfig() *Config {
 		DBPassword:   dbPassword,
 		DBName:       dbName,
 		DBEnabled:    dbEnabled,
+		// AI
+		GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
+		AIModel:      getEnv("AI_MODEL", "gemini-2.0-flash"),
+		AIProvider:   getEnv("AI_PROVIDER", "gemini"),
 	}
 }
 

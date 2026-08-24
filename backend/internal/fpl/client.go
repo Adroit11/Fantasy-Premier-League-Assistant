@@ -21,6 +21,7 @@ type Client interface {
 	GetEntry(ctx context.Context, teamID int) (*Entry, error)
 	GetPicks(ctx context.Context, teamID int, event int) (*PicksResponse, error)
 	GetFixtures(ctx context.Context, event *int) ([]Fixture, error)
+	GetEntryHistory(ctx context.Context, teamID int) (*EntryHistoryResponse, error)
 }
 
 // HTTPClient implements Client using standard net/http and caching
@@ -217,4 +218,29 @@ func (c *HTTPClient) GetFixtures(ctx context.Context, event *int) ([]Fixture, er
 		return nil, err
 	}
 	return v.([]Fixture), nil
+}
+
+// GetEntryHistory fetches per-gameweek points history from /api/entry/{id}/history/.
+// Results are cached for 5 minutes since they only change after a GW closes.
+func (c *HTTPClient) GetEntryHistory(ctx context.Context, teamID int) (*EntryHistoryResponse, error) {
+	cacheKey := fmt.Sprintf("fpl:entry_history:%d", teamID)
+	if data, ok := cacheGetTyped[EntryHistoryResponse](c.cache, cacheKey); ok {
+		return data, nil
+	}
+
+	v, err := c.group.Do(cacheKey, func() (interface{}, error) {
+		if data, ok := cacheGetTyped[EntryHistoryResponse](c.cache, cacheKey); ok {
+			return data, nil
+		}
+		var data EntryHistoryResponse
+		if err := c.doRequest(ctx, fmt.Sprintf("/entry/%d/history/", teamID), &data); err != nil {
+			return nil, fmt.Errorf("GetEntryHistory: %w", err)
+		}
+		c.cache.Set(cacheKey, &data, 5*time.Minute)
+		return &data, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return v.(*EntryHistoryResponse), nil
 }
